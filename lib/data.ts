@@ -568,7 +568,7 @@ export const getLeaderboard = async (
   poolId: string,
   providedSupabase?: TypedSupabaseClient,
 ): Promise<LeaderboardEntry[]> => {
-  const supabase = await getSupabase(providedSupabase)
+  const supabase = createSupabaseAdminClient()
   if (!isUUID(poolId)) return []
 
   const { data, error } = await supabase
@@ -590,9 +590,8 @@ picks (
 `,
     )
     .eq("pool_id", poolId)
-    .eq("status", "ALIVE")
     .order("current_streak", { ascending: false, foreignTable: undefined }) // Order by streak first
-    .order("status", { ascending: true }) // Then ALIVE first
+    .order("status", { ascending: true }) // ALIVE first, then OUT
 
   if (error) {
     console.error(`[getLeaderboard] Error fetching leaderboard data for pool ${poolId}:`, error.message)
