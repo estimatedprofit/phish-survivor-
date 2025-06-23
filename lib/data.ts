@@ -111,7 +111,7 @@ export const getPoolDetails = async (
   poolId?: string,
   providedSupabase?: TypedSupabaseClient,
 ): Promise<Pool | undefined> => {
-  const supabase = await getSupabase(providedSupabase)
+  const supabase = providedSupabase ? providedSupabase : createSupabaseAdminClient()
   const trimmedPoolId = poolId?.trim()
 
   if (!trimmedPoolId || !isUUID(trimmedPoolId)) {
