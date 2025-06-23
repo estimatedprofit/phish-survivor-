@@ -91,7 +91,7 @@ export default async function AdminManagePlayersPage({ params }: { params: Promi
               {participants.map((participant) => (
                 <TableRow key={participant.participantId}>
                   <TableCell className="font-medium">{participant.nickname}</TableCell>
-                  <TableCell className="text-muted-foreground">{participant.email}</TableCell>
+                  <TableCell className="text-muted-foreground">{participant.email || "-"}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {format(parseISO(participant.joinedAt), "MMM d, yyyy h:mm a")}
                   </TableCell>

@@ -664,7 +664,7 @@ export const getPoolParticipantsWithProfiles = async (
       joined_at,
       status,
       current_streak,
-      profiles ( nickname, email )`
+      profiles ( nickname )`
     )
     .eq("pool_id", poolId)
 
@@ -679,7 +679,6 @@ export const getPoolParticipantsWithProfiles = async (
     participantId: p.id,
     userId: p.user_id,
     nickname: p.profiles?.nickname || "Unknown",
-    email: p.profiles?.email || "",
     joinedAt: p.joined_at,
     status: p.status as "ALIVE" | "OUT",
     currentStreak: p.current_streak || 0,

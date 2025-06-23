@@ -100,7 +100,7 @@ export interface PoolParticipantWithProfile {
   participantId: string
   userId: string
   nickname: string
-  email: string
+  email?: string
   joinedAt: string // ISO Date string
   status: "ALIVE" | "OUT"
   currentStreak: number
