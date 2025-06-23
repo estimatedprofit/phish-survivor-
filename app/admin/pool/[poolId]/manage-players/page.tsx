@@ -83,6 +83,8 @@ export default async function AdminManagePlayersPage({ params }: { params: Promi
                 <TableHead>Email</TableHead>
                 <TableHead>Joined At</TableHead>
                 <TableHead>Current Streak</TableHead>
+                <TableHead>Next Pick</TableHead>
+                <TableHead>Last Result</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -96,6 +98,16 @@ export default async function AdminManagePlayersPage({ params }: { params: Promi
                     {format(parseISO(participant.joinedAt), "MMM d, yyyy h:mm a")}
                   </TableCell>
                   <TableCell>{participant.currentStreak}</TableCell>
+                  <TableCell className="text-muted-foreground">{participant.upcomingPickTitle || "-"}</TableCell>
+                  <TableCell className={
+                    participant.lastPickResult === "WIN"
+                      ? "text-green-600"
+                      : participant.lastPickResult === "LOSE"
+                      ? "text-red-600"
+                      : "text-muted-foreground"
+                  }>
+                    {participant.lastPickTitle || "-"}
+                  </TableCell>
                   <TableCell>
                     <ParticipantStatusBadge status={participant.status} />
                   </TableCell>
