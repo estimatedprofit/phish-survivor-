@@ -64,10 +64,9 @@ export function ManagePlayerStatusClient({ participant, poolId }: ManagePlayerSt
 
   return (
     <form onSubmit={handleFormSubmit} className="flex items-center gap-2 justify-end">
-      <input type="hidden" name="poolParticipantId" value={participant.participantId} />
-      <input type="hidden" name="poolId" value={poolId} />
+      <input type="hidden" name="participantId" value={participant.participantId} />
       <Select
-        name="newStatus"
+        name="status"
         value={currentStatus}
         onValueChange={(value) => setCurrentStatus(value as "ALIVE" | "OUT")}
       >

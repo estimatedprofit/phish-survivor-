@@ -159,8 +159,8 @@ pool_participants(status)
 }
 
 export const getAvailablePools = async (providedSupabase?: TypedSupabaseClient): Promise<Pool[]> => {
-  const supabase = await getSupabase(providedSupabase)
-  const { data: poolsData, error } = await supabase
+  const supabaseAdmin = createSupabaseAdminClient()
+  const { data: poolsData, error } = await supabaseAdmin
     .from("pools")
     .select(
       `
@@ -181,7 +181,7 @@ pool_participants(status)
   const poolsWithShows = await Promise.all(
     poolsData.map(async (dbPool) => {
       // Get the next upcoming show for this pool
-      const { data: nextShow } = await supabase
+      const { data: nextShow } = await supabaseAdmin
         .from("shows")
         .select("show_date, venue_name, city_state, status")
         .eq("pool_id", dbPool.id)
