@@ -53,6 +53,18 @@ function PoolStatusBadge({ status }: { status: Pool["status"] }) {
 export default async function HomePage() {
   const [allPools, currentUser] = await Promise.all([getAvailablePools(), getCurrentUser()])
 
+  let joinedPoolIds = new Set<string>()
+  if (currentUser) {
+    const supabase = await (await import("@/lib/supabase/server")).createSupabaseServerClient()
+    const { data: joined } = await supabase
+      .from("pool_participants")
+      .select("pool_id")
+      .eq("user_id", currentUser.id)
+    if (joined) {
+      joined.forEach((row: any) => joinedPoolIds.add(row.pool_id))
+    }
+  }
+
   const publicPools = allPools.filter((pool) => pool.visibility === "public")
 
   return (
@@ -220,11 +232,9 @@ export default async function HomePage() {
                   </CardContent>
                   <CardFooter>
                     {pool.status === "SIGNUPS_OPEN" ? (
-                      currentUser ? (
+                      joinedPoolIds.has(pool.id) ? (
                         <Button className="w-full" asChild>
-                          <Link href={`/join/${pool.id}`}>
-                            <LogIn className="mr-2 h-4 w-4" /> Join Pool
-                          </Link>
+                          <Link href={`/dashboard?poolId=${pool.id}`}>View Pool</Link>
                         </Button>
                       ) : (
                         <Button className="w-full" asChild>
