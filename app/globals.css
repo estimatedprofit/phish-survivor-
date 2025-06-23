@@ -1,0 +1,137 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 182 65% 48%; /* Phish teal */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 340 94% 67%; /* Coral accent */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 280 70% 50%; /* Purple accent for hover */
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 182 65% 48%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 340 94% 67%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 280 70% 50%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    @apply bg-background text-foreground;
+  }
+}
+
+/* --- Updated CSS for Hero Redesign --- */
+@layer utilities {
+  .hero-background {
+    position: relative;
+    background: linear-gradient(to bottom right, #4c1d95, #22d3ee); /* deep purple -> aqua */
+    overflow: hidden;
+  }
+
+  .hero-background::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("/placeholder.svg?height=800&width=1200");
+    background-size: cover;
+    opacity: 0.05;
+    pointer-events: none;
+  }
+
+  .section {
+    @apply my-12 space-y-6;
+  }
+
+  /* Card gradient stripe on top */
+  .card-gradient {
+    position: relative;
+  }
+  .card-gradient::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+  }
+
+  .hover-spin {
+    transition: transform 0.4s ease;
+  }
+  .hover-spin:hover {
+    transform: rotate(12deg);
+  }
+
+  /* Mobile-specific optimizations */
+  @media (max-width: 640px) {
+    .hero-background {
+      background-attachment: scroll; /* Better performance on mobile */
+    }
+    
+    /* Ensure touch targets are at least 44px */
+    button, .button, [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    /* Prevent zoom on input focus */
+    input, select, textarea {
+      font-size: 16px;
+    }
+  }
+
+  /* Improve scrolling performance */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+}
