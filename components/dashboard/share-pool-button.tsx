@@ -26,7 +26,7 @@ export function SharePoolButton({ poolId }: SharePoolButtonProps) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const baseUrl = `${window.location.origin}/join`
-      setShareUrl(poolId ? `${baseUrl}/${poolId}` : baseUrl)
+      setShareUrl(poolId ? `${baseUrl}/${poolId}?invited=1` : baseUrl)
     }
   }, [poolId])
 

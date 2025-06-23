@@ -10,37 +10,8 @@ import { JoinPoolButton } from "@/components/join-pool-button"
 
 export const dynamic = "force-dynamic"
 
-interface JoinPoolPageProps {
-  params: Promise<{ poolId: string }>
-}
-
-function PoolStatusBadge({ status }: { status: string }) {
-  if (status === "SIGNUPS_OPEN") {
-    return (
-      <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-        <Users className="mr-1 h-3 w-3" /> Signups Open
-      </Badge>
-    )
-  }
-  if (status === "ACTIVE") {
-    return (
-      <Badge variant="secondary" className="bg-blue-500 text-white hover:bg-blue-600">
-        <Users className="mr-1 h-3 w-3" /> Active
-      </Badge>
-    )
-  }
-  if (status === "COMPLETED") {
-    return (
-      <Badge variant="outline">
-        <CheckCircle className="mr-1 h-3 w-3" /> Completed
-      </Badge>
-    )
-  }
-  return <Badge variant="secondary">{status}</Badge>
-}
-
-export default async function JoinPoolPage({ params }: JoinPoolPageProps) {
-  const { poolId } = await params
+export default async function JoinPoolPage({ params, searchParams }: { params: { poolId: string }; searchParams: { [key: string]: string | string[] | undefined } }) {
+  const { poolId } = params
   
   const pool = await getPoolDetails(poolId)
   if (!pool) {
@@ -62,10 +33,17 @@ export default async function JoinPoolPage({ params }: JoinPoolPageProps) {
     <div className="container mx-auto py-12 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">You've Been Invited!</h1>
-          <p className="text-muted-foreground">
-            Someone shared this Phish Survivor pool with you. Check out the details below.
-          </p>
+          {searchParams?.invited === "1" ? (
+            <>
+              <h1 className="text-3xl font-bold mb-2">You've Been Invited!</h1>
+              <p className="text-muted-foreground">Someone shared this Phish Survivor pool with you. Check out the details below.</p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-3xl font-bold mb-2">Join this Survivor Pool</h1>
+              <p className="text-muted-foreground">Review the details below and sign up to enter the game.</p>
+            </>
+          )}
         </div>
 
         <Card className="card-gradient">
@@ -200,4 +178,29 @@ export default async function JoinPoolPage({ params }: JoinPoolPageProps) {
       </div>
     </div>
   )
+}
+
+function PoolStatusBadge({ status }: { status: string }) {
+  if (status === "SIGNUPS_OPEN") {
+    return (
+      <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+        <Users className="mr-1 h-3 w-3" /> Signups Open
+      </Badge>
+    )
+  }
+  if (status === "ACTIVE") {
+    return (
+      <Badge variant="secondary" className="bg-blue-500 text-white hover:bg-blue-600">
+        <Users className="mr-1 h-3 w-3" /> Active
+      </Badge>
+    )
+  }
+  if (status === "COMPLETED") {
+    return (
+      <Badge variant="outline">
+        <CheckCircle className="mr-1 h-3 w-3" /> Completed
+      </Badge>
+    )
+  }
+  return <Badge variant="secondary">{status}</Badge>
 }

@@ -48,7 +48,7 @@ export function CreatePoolForm() {
         return
       }
       if (state.poolVisibility === "private" && state.poolId && typeof window !== "undefined") {
-        setShareableLink(`${window.location.origin}/join/${state.poolId}`)
+        setShareableLink(`${window.location.origin}/join/${state.poolId}?invited=1`)
       } else {
         setShareableLink(null)
       }
