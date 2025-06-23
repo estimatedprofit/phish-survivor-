@@ -656,6 +656,30 @@ export const getPoolParticipantsWithProfiles = async (
     return []
   }
 
+  // Determine next upcoming and last played show IDs
+  const { data: nextShow } = await supabaseAdmin
+    .from("shows")
+    .select("id")
+    .eq("pool_id", poolId)
+    .eq("is_active", true)
+    .in("status", ["UPCOMING", "PICKS_LOCKED"])
+    .order("show_date", { ascending: true })
+    .limit(1)
+    .single()
+
+  const { data: lastShow } = await supabaseAdmin
+    .from("shows")
+    .select("id")
+    .eq("pool_id", poolId)
+    .eq("is_active", true)
+    .eq("status", "PLAYED")
+    .order("show_date", { ascending: false })
+    .limit(1)
+    .single()
+
+  const nextShowId = nextShow?.id as string | undefined
+  const lastShowId = lastShow?.id as string | undefined
+
   const { data: participantsData, error } = await supabaseAdmin
     .from("pool_participants")
     .select(
@@ -675,12 +699,60 @@ export const getPoolParticipantsWithProfiles = async (
 
   if (!participantsData) return []
 
-  return participantsData.map((p: any) => ({
-    participantId: p.id,
-    userId: p.user_id,
-    nickname: p.profiles?.nickname || "Unknown",
-    joinedAt: p.joined_at,
-    status: p.status as "ALIVE" | "OUT",
-    currentStreak: p.current_streak || 0,
-  }))
+  const enriched = await Promise.all(
+    participantsData.map(async (p: any) => {
+      let upcomingPickTitle: string | undefined
+      let lastPickTitle: string | undefined
+      let lastPickResult: "WIN" | "LOSE" | "PENDING" | undefined
+
+      if (nextShowId) {
+        const { data: upPick } = await supabaseAdmin
+          .from("picks")
+          .select("result, songs (title)")
+          .eq("pool_participant_id", p.id)
+          .eq("show_id", nextShowId)
+          .single()
+        if (upPick) upcomingPickTitle = (upPick as any).songs?.title || undefined
+      }
+
+      if (lastShowId) {
+        const { data: lastPick } = await supabaseAdmin
+          .from("picks")
+          .select("result, songs (title)")
+          .eq("pool_participant_id", p.id)
+          .eq("show_id", lastShowId)
+          .single()
+        if (lastPick) {
+          lastPickTitle = (lastPick as any).songs?.title || undefined
+          lastPickResult = lastPick.result as any
+        }
+      }
+
+      // fetch email and full name from auth.users
+      const { data: userRow } = await supabaseAdmin
+        .from("auth.users")
+        .select("email, raw_user_meta_data")
+        .eq("id", p.user_id)
+        .single()
+
+      const email = (userRow as any)?.email || undefined
+      const fullName = (userRow as any)?.raw_user_meta_data?.full_name || undefined
+
+      return {
+        participantId: p.id,
+        userId: p.user_id,
+        nickname: p.profiles?.nickname || "Unknown",
+        fullName,
+        email,
+        joinedAt: p.joined_at,
+        status: p.status as "ALIVE" | "OUT",
+        currentStreak: p.current_streak || 0,
+        upcomingPickTitle,
+        lastPickTitle,
+        lastPickResult: lastPickResult as any,
+      }
+    })
+  )
+
+  return enriched as PoolParticipantWithProfile[]
 }

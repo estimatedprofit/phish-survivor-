@@ -8,6 +8,7 @@ export interface User {
   currentStreak?: number
   role?: string
   profileId?: string
+  fullName?: string
 }
 
 export interface Pool {
@@ -104,4 +105,7 @@ export interface PoolParticipantWithProfile {
   joinedAt: string // ISO Date string
   status: "ALIVE" | "OUT"
   currentStreak: number
+  upcomingPickTitle?: string // song title for upcoming show
+  lastPickTitle?: string
+  lastPickResult?: "WIN" | "LOSE" | "PENDING"
 }

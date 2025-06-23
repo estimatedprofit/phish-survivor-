@@ -80,6 +80,7 @@ export default async function AdminManagePlayersPage({ params }: { params: Promi
             <TableHeader>
               <TableRow>
                 <TableHead>Nickname</TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Joined At</TableHead>
                 <TableHead>Current Streak</TableHead>
@@ -93,19 +94,22 @@ export default async function AdminManagePlayersPage({ params }: { params: Promi
               {participants.map((participant) => (
                 <TableRow key={participant.participantId}>
                   <TableCell className="font-medium">{participant.nickname}</TableCell>
+                  <TableCell className="text-muted-foreground">{participant.fullName || "-"}</TableCell>
                   <TableCell className="text-muted-foreground">{participant.email || "-"}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {format(parseISO(participant.joinedAt), "MMM d, yyyy h:mm a")}
                   </TableCell>
                   <TableCell>{participant.currentStreak}</TableCell>
                   <TableCell className="text-muted-foreground">{participant.upcomingPickTitle || "-"}</TableCell>
-                  <TableCell className={
-                    participant.lastPickResult === "WIN"
-                      ? "text-green-600"
-                      : participant.lastPickResult === "LOSE"
-                      ? "text-red-600"
-                      : "text-muted-foreground"
-                  }>
+                  <TableCell
+                    className={
+                      participant.lastPickResult === "WIN"
+                        ? "text-green-600"
+                        : participant.lastPickResult === "LOSE"
+                        ? "text-red-600"
+                        : "text-muted-foreground"
+                    }
+                  >
                     {participant.lastPickTitle || "-"}
                   </TableCell>
                   <TableCell>
@@ -118,7 +122,7 @@ export default async function AdminManagePlayersPage({ params }: { params: Promi
               ))}
               {participants.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     No participants in this pool yet.
                   </TableCell>
                 </TableRow>
