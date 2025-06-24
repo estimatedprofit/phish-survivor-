@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Users, UserCheck, CalendarClock, Flame, Trophy, Music, BarChart } from "lucide-react"
-import { format, parseISO } from "date-fns" // Added parseISO
+import { format, parseISO, formatDistanceToNowStrict } from "date-fns" // Added parseISO and formatDistanceToNowStrict
 import { cn } from "@/lib/utils"
 
 interface DashboardStatsProps {
@@ -115,17 +115,33 @@ export function DashboardStats({
         </CardContent>
       </Card>
 
-      {/* Signup Deadline Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xs sm:text-sm font-medium">Signup Deadline</CardTitle>
-          <CalendarClock className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-xl font-bold">{format(parseISO(pool.signupDeadline), "MMM d, yyyy")}</div>
-          <p className="text-xs text-muted-foreground">{format(parseISO(pool.signupDeadline), "h:mm a zzz")}</p>
-        </CardContent>
-      </Card>
+      {/* Signup Deadline Card (optional) */}
+      {pool.signupDeadline && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Signup Deadline</CardTitle>
+            <CalendarClock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              try {
+                const d = parseISO(pool.signupDeadline)
+                if (isNaN(d.getTime())) throw new Error("Invalid date")
+                return (
+                  <>
+                    <div className="text-xl font-bold">{format(d, "MMM d, yyyy h:mm a zzz")}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDistanceToNowStrict(d, { addSuffix: true })}
+                    </p>
+                  </>
+                )
+              } catch {
+                return <div className="text-xl font-bold">TBD</div>
+              }
+            })()}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

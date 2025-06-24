@@ -92,7 +92,7 @@ export function LeaderboardTable({ entries: allEntries, title = "Leaderboard" }:
                           <span className="truncate max-w-[100px] sm:max-w-none">{entry.nickname}</span>
                         </Button>
                       </PlayerPicksModal>
-                      {entry.status === "ELIMINATED" && <Skull className="h-4 w-4 text-red-500" />}
+                      {entry.status === "OUT" && <Skull className="h-4 w-4 text-red-500" />}
                     </div>
                   </TableCell>
                   <TableCell className="text-center text-xs sm:text-sm">

@@ -130,7 +130,16 @@ export default async function JoinPoolPage({ params, searchParams }: { params: {
             {/* Signup Deadline */}
             <div className="text-sm text-muted-foreground text-center p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-200/50 dark:border-orange-800/50">
               <Calendar className="inline mr-1.5 h-4 w-4" />
-              Signups close: {format(parseISO(pool.signupDeadline), "EEEE, MMMM d, yyyy 'at' h:mm a")}
+              Signups close: {(() => {
+                if (!pool.signupDeadline) return "TBD"
+                try {
+                  const d = parseISO(pool.signupDeadline)
+                  if (isNaN(d.getTime())) throw new Error("Invalid date")
+                  return format(d, "EEEE, MMMM d, yyyy 'at' h:mm a")
+                } catch {
+                  return "TBD"
+                }
+              })()}
             </div>
           </CardContent>
 

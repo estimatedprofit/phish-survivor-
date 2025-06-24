@@ -106,7 +106,7 @@ export default async function AdminPoolDetailPage({ params }: { params: Promise<
                     <ShowStatusBadge status={show.status} />
                   </TableCell>
                   <TableCell className="text-right flex gap-2 justify-end">
-                    <ActiveToggle showId={show.id} isActive={show.isActive} />
+                    <ActiveToggle showId={show.id} isActive={Boolean(show.isActive)} />
                     {show.status !== "PLAYED" ? (
                       <Link href={`/admin/process-results/${show.id}?poolId=${pool.id}`} passHref legacyBehavior>
                         <Button asChild variant="default" size="sm">

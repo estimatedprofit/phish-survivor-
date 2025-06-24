@@ -49,6 +49,13 @@ export function DashboardClient({
     }
   }, [initialUser, initialPool, router])
 
+  // Ensure page starts at top when navigating here
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" })
+    }
+  }, [])
+
   const handleShowAllEntrants = () => setLeaderboardFilter("ALL")
   const handleShowActivePlayers = () => setLeaderboardFilter("ALIVE")
 

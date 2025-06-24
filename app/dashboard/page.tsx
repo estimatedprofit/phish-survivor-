@@ -73,7 +73,7 @@ export default async function DashboardPage({
     // For each pool, determine the next pick deadline (if any).
     const poolsWithNextPick = await Promise.all(
       pools.map(async (p) => {
-        const shows = await getShows(p, supabase)
+        const shows = await getShows(p!, supabase)
         // Find the earliest upcoming or picks_locked show.
         const upcomingShow = shows
           .filter((s) => s.status === "UPCOMING" || s.status === "PICKS_LOCKED")
@@ -91,6 +91,7 @@ export default async function DashboardPage({
         <PageHeader title="Select a Pool" description="Choose which pool dashboard you want to view." />
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
           {poolsWithNextPick.map(({ pool: p, nextPickDeadline }) => (
+            p && (
             <Card key={p.id} className="flex flex-col">
               <CardHeader>
                 <div className="flex justify-between items-start">
@@ -114,6 +115,7 @@ export default async function DashboardPage({
                 </Button>
               </CardFooter>
             </Card>
+            )
           ))}
         </div>
       </div>

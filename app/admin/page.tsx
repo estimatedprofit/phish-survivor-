@@ -80,7 +80,18 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
               <p>Entrants: {pool.totalEntrants}</p>
               <p>Active: {pool.activePlayers}</p>
               {pool.maxPlayers && <p>Max Players: {pool.maxPlayers}</p>}
-              <p>Signups Close: {format(parseISO(pool.signupDeadline), "MMM d, yyyy h:mm a")}</p>
+              <p>
+                Signups Close: {(() => {
+                  if (!pool.signupDeadline) return "TBD"
+                  try {
+                    const d = parseISO(pool.signupDeadline)
+                    if (isNaN(d.getTime())) throw new Error("Invalid date")
+                    return format(d, "MMM d, yyyy h:mm a")
+                  } catch {
+                    return "TBD"
+                  }
+                })()}
+              </p>
               {pool.pickLockOffsetHours != null && (
                 <p>
                   Pick Lock: {pool.pickLockOffsetHours || 0}h {pool.pickLockOffsetMinutes || 0}m before

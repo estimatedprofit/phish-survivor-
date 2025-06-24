@@ -307,7 +307,7 @@ const STATE_TZ_MAP: Record<string, string> = {
   WA: "America/Los_Angeles",
 }
 
-const inferTimezone = (cityState?: string): string => {
+export const inferTimezone = (cityState?: string): string => {
   if (!cityState) return "America/New_York"
   const parts = cityState.split(",").map((p) => p.trim())
   const stateCode = parts.length > 1 ? parts[1].toUpperCase() : ""
@@ -614,13 +614,17 @@ picks (
 
     const lastPick = allPicks.sort((a, b) => new Date(b.showDate!).getTime() - new Date(a.showDate!).getTime())[0]
 
+    const correctPicks = allPicks.filter((p) => p.result === "WIN").length
     return {
       userId: participant.profiles.id,
-      rank: index + 1, // Rank based on the sorted order (streak, then status)
+      rank: index + 1,
       nickname: participant.profiles.nickname,
       status: participant.status,
       lastPick: lastPick?.songTitle || "-",
-      allPicks: allPicks,
+      allPicks,
+      current_streak: participant.current_streak || 0,
+      correct_picks: correctPicks,
+      total_picks: allPicks.length,
     }
   })
 
@@ -628,19 +632,21 @@ picks (
 }
 
 export const getAllSongs = async (providedSupabase?: TypedSupabaseClient): Promise<Song[]> => {
-  const supabase = await getSupabase(providedSupabase)
-  const { data, error } = await supabase.from("songs").select("id, title, phish_net_song_id, times_played")
-
-  if (error) {
-    console.error("[getAllSongs] Error fetching songs:", error.message)
+  try {
+    const supabase = await getSupabase(providedSupabase)
+    const { data, error } = await supabase.from("songs").select("id, title, phish_net_song_id, times_played")
+    if (error) throw new Error(error.message)
+    if (!data) return []
+    return data.map((row) => ({
+      id: row.id,
+      phishNetSongId: row.phish_net_song_id || undefined,
+      title: row.title,
+      timesPlayed: row.times_played === null ? undefined : row.times_played,
+    }))
+  } catch (e: any) {
+    console.error("[getAllSongs] Failed to fetch songs:", e.message)
     return []
   }
-  return data.map((row) => ({
-    id: row.id,
-    phishNetSongId: row.phish_net_song_id || undefined,
-    title: row.title,
-    timesPlayed: row.times_played === null ? undefined : row.times_played,
-  }))
 }
 
 export const getPoolParticipantsWithProfiles = async (

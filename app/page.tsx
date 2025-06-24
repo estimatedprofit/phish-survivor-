@@ -227,7 +227,16 @@ export default async function HomePage() {
                     <div className="text-sm text-muted-foreground">
                       <CalendarClock className="inline mr-1.5 h-4 w-4" />
                       Signups close:{" "}
-                      {pool.signupDeadline ? format(parseISO(pool.signupDeadline), "MMM d, yyyy h:mm a") : "N/A"}
+                      {(() => {
+                        if (!pool.signupDeadline) return "N/A"
+                        try {
+                          const dateObj = parseISO(pool.signupDeadline)
+                          if (isNaN(dateObj.getTime())) return "TBD"
+                          return format(dateObj, "MMM d, yyyy h:mm a")
+                        } catch {
+                          return "TBD"
+                        }
+                      })()}
                     </div>
                   </CardContent>
                   <CardFooter>

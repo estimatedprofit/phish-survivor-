@@ -13,7 +13,7 @@ export async function generateMetadata(
   { params, searchParams }: PickSongPageProps,
   // parent: ResolvingMetadata, // parent not used
 ): Promise<Metadata> {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
   const { showId } = await params
   const sp = await searchParams
   const poolId = sp?.poolId as string | undefined
@@ -37,7 +37,7 @@ export default async function PickSongPage({ params, searchParams }: PickSongPag
   const { showId } = await params
   const sp = await searchParams
   const poolId = sp?.poolId as string | undefined
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   if (!poolId) {
     return (
@@ -47,13 +47,8 @@ export default async function PickSongPage({ params, searchParams }: PickSongPag
     )
   }
 
-  const [show, pool, allSongsList, currentUser] = await Promise.all([
-    getShowDetails(showId, poolId, supabase),
-    getPoolDetails(poolId, supabase),
-    getAllSongs(supabase),
-    getCurrentUser(supabase, poolId),
-  ])
-
+  // Fetch pool first so we can bail early if the ID is wrong
+  const pool = await getPoolDetails(poolId, supabase)
   if (!pool) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -62,12 +57,26 @@ export default async function PickSongPage({ params, searchParams }: PickSongPag
     )
   }
 
+  // Fetch show next – if not found we show friendly message instead of crashing
+  const show = await getShowDetails(showId, poolId, supabase)
   if (!show) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <PageHeader title="Show Not Found" description="Could not find details for this show." />
       </div>
     )
+  }
+
+  // Remaining data isn't critical; wrap in try/catch so we can still render the form
+  let allSongsList = [] as Awaited<ReturnType<typeof getAllSongs>>
+  let currentUser = null as Awaited<ReturnType<typeof getCurrentUser>>
+  try {
+    ;[allSongsList, currentUser] = await Promise.all([
+      getAllSongs(supabase),
+      getCurrentUser(supabase, poolId),
+    ])
+  } catch (e) {
+    console.error("[PickSongPage] Non-fatal data fetch error:", (e as Error).message)
   }
 
   return (

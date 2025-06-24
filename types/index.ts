@@ -81,6 +81,9 @@ export interface LeaderboardEntry {
   status: "ALIVE" | "OUT"
   lastPick?: string // Title of the song for the most recent show picked
   allPicks: Pick[] // Complete pick history for this pool
+  current_streak?: number
+  correct_picks?: number
+  total_picks?: number
 }
 
 // For Phish.net API (if used)
@@ -101,6 +104,7 @@ export interface PoolParticipantWithProfile {
   participantId: string
   userId: string
   nickname: string
+  fullName?: string
   email?: string
   joinedAt: string // ISO Date string
   status: "ALIVE" | "OUT"

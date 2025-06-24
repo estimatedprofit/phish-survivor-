@@ -10,7 +10,7 @@ interface ProcessResultsPageProps {
 }
 
 export async function generateMetadata({ params, searchParams }: ProcessResultsPageProps): Promise<Metadata> {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
   const paramsObj = await params
   const { showId } = paramsObj
   const sp = searchParams
@@ -33,7 +33,7 @@ export async function generateMetadata({ params, searchParams }: ProcessResultsP
 }
 
 export default async function ProcessResultsPage({ params, searchParams }: ProcessResultsPageProps) {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
   const paramsObj = await params
   const { showId } = paramsObj
   const sp = searchParams
