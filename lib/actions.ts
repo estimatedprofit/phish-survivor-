@@ -548,10 +548,14 @@ export async function importShowsForPool(poolId: string, year?: number): Promise
         eventDateIso = s.showdate
       }
 
-      // For live pools ignore shows that have already happened
-      const today = new Date()
-      if (!pool.is_test_pool && showDateObj < today) {
-        continue
+      // For live pools ignore shows strictly before today (but allow shows happening later today).
+      if (!pool.is_test_pool) {
+        const now = new Date()
+        // Normalize to UTC 00:00 of today for comparison
+        const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+        if (showDateObj < todayStart) {
+          continue
+        }
       }
 
       // Normalize to full ISO YYYY-MM-DD to avoid two-digit year strings that Postgres
