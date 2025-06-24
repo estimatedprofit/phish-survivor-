@@ -50,7 +50,7 @@ export default async function RootLayout({
                     <Button variant="ghost" size="sm" asChild>
                       <Link href="/dashboard">
                         <LayoutDashboard className="h-4 w-4" />
-                        <span className="hidden sm:inline sm:ml-2">My Dashboard</span>
+                        <span className="hidden sm:inline sm:ml-2">My Pools</span>
                       </Link>
                     </Button>
                   )}

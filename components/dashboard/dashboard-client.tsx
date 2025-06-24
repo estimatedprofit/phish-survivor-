@@ -66,6 +66,9 @@ export function DashboardClient({
     return allLeaderboardEntries
   }, [allLeaderboardEntries, leaderboardFilter])
 
+  // Determine next upcoming show (first UPCOMING or PICKS_LOCKED)
+  const nextShow = shows.find((s) => s.status === "UPCOMING" || s.status === "PICKS_LOCKED")
+
   if (isLoading || !user || !pool) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
@@ -77,10 +80,23 @@ export function DashboardClient({
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Phish Survivor Dashboard" description={`Welcome to ${pool.name}, ${user.nickname}!`}>
+      <PageHeader title={`${pool.name} Pool`} description={`Welcome ${user.nickname}!`}>
         <SharePoolButton poolId={pool.id} />
       </PageHeader>
       <UserStatusBanner user={user} />
+      {/* Next Show Section */}
+      {(() => {
+        if (nextShow) {
+          return (
+            <section className="mb-8">
+              <h2 className="text-2xl font-semibold mb-4">Next Show</h2>
+              {/* Re-use UpcomingShowsSection card layout for single show */}
+              <UpcomingShowsSection shows={[nextShow]} userStatus={user.status} pool={pool} />
+            </section>
+          )
+        }
+        return null
+      })()}
       <DashboardStats
         pool={pool}
         user={user}
@@ -90,7 +106,8 @@ export function DashboardClient({
         currentFilter={leaderboardFilter}
       />
       <Separator />
-      <UpcomingShowsSection shows={shows} userStatus={user.status} pool={pool} />
+      {/* Upcoming shows excluding the next one */}
+      <UpcomingShowsSection shows={shows.filter((s) => s.id !== nextShow?.id)} userStatus={user.status} pool={pool} />
       <Separator />
       <PastShowsSection shows={shows} />
       <Separator />
