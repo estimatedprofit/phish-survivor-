@@ -79,24 +79,25 @@ export function UpcomingShowsSection({ shows, userStatus, pool }: UpcomingShowsS
                       )}
                     </Link>
                   </Button>
-                ) : show.status === "PICKS_LOCKED" ? (
-                  <>
-                    <Button variant="outline" disabled className="w-full bg-muted text-muted-foreground">
-                      <Lock className="mr-2 h-4 w-4" /> Picks Locked
-                    </Button>
-                    {show.resultsSummary && show.resultsSummary.songPickCounts.length > 0 && (
-                      <LockedShowStatsModal show={show}>
-                        <Button variant="secondary" className="w-full">
-                          <BarChart3 className="mr-2 h-4 w-4" /> View Pick Stats
-                        </Button>
-                      </LockedShowStatsModal>
-                    )}
-                  </>
-                ) : userStatus === "OUT" ? (
-                  <Button variant="outline" disabled className="w-full bg-muted text-muted-foreground">
-                    You're Out
-                  </Button>
-                ) : null}
+                ) : (() => {
+                    const nowLocked = displayDeadline && new Date() > displayDeadline
+                    if (show.status === "PICKS_LOCKED" || nowLocked) {
+                      return (
+                        <>
+                          <Button variant="outline" disabled className="w-full bg-muted text-muted-foreground">
+                            <Lock className="mr-2 h-4 w-4" /> Picks Locked
+                          </Button>
+                          <LockedShowStatsModal show={show} poolId={pool.id}>
+                            <Button variant="secondary" className="w-full">
+                              <BarChart3 className="mr-2 h-4 w-4" /> View Pick Stats
+                            </Button>
+                          </LockedShowStatsModal>
+                        </>
+                      )
+                    }
+                    return null
+                  })()
+                }
               </CardFooter>
             </Card>
           )
