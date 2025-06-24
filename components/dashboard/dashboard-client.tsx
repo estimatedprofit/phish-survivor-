@@ -84,6 +84,15 @@ export function DashboardClient({
         <SharePoolButton poolId={pool.id} />
       </PageHeader>
       <UserStatusBanner user={user} />
+      <DashboardStats
+        pool={pool}
+        user={user}
+        allSongs={allSongsList}
+        onShowAllEntrants={handleShowAllEntrants}
+        onShowActivePlayers={handleShowActivePlayers}
+        currentFilter={leaderboardFilter}
+      />
+      <Separator />
       {/* Next Show Section */}
       {(() => {
         if (nextShow) {
@@ -97,15 +106,6 @@ export function DashboardClient({
         }
         return null
       })()}
-      <DashboardStats
-        pool={pool}
-        user={user}
-        allSongs={allSongsList}
-        onShowAllEntrants={handleShowAllEntrants}
-        onShowActivePlayers={handleShowActivePlayers}
-        currentFilter={leaderboardFilter}
-      />
-      <Separator />
       {/* Upcoming shows excluding the next one */}
       <UpcomingShowsSection shows={shows.filter((s) => s.id !== nextShow?.id)} userStatus={user.status} pool={pool} />
       <Separator />
