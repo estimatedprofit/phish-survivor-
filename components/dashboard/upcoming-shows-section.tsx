@@ -3,9 +3,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { CalendarDays, Clock, Lock, Edit3, CheckSquare, BarChart3 } from "lucide-react"
-import { format, parseISO, formatDistanceToNowStrict } from "date-fns"
+import { format, parseISO } from "date-fns"
 import { formatInTimeZone } from "date-fns-tz"
 import { LockedShowStatsModal } from "./locked-show-stats-modal"
+import { TimeRemaining } from "@/components/dashboard/time-remaining"
 
 interface UpcomingShowsSectionProps {
   shows: PhishShow[]
@@ -44,10 +45,15 @@ export function UpcomingShowsSection({ shows, userStatus, pool }: UpcomingShowsS
                   </div>
                 )}
                 {displayDeadline && (
-                  <div className="flex items-center text-sm text-orange-600 dark:text-orange-400">
-                    <Clock className="mr-2 h-4 w-4" />
-                    <span>
-                      Picks due by: {formatInTimeZone(displayDeadline, show.timeZone || "America/New_York", "MMM d, h:mm a zzz")} ({formatDistanceToNowStrict(displayDeadline, { addSuffix: true })})
+                  <div className="flex flex-col text-sm text-orange-600 dark:text-orange-400">
+                    <div className="flex items-center">
+                      <Clock className="mr-2 h-4 w-4" />
+                      <span>
+                        Picks due: {formatInTimeZone(displayDeadline, show.timeZone || "America/New_York", "MMM d, h:mm a zzz")}
+                      </span>
+                    </div>
+                    <span className="ml-6 text-xs">
+                      <TimeRemaining deadline={displayDeadline} />
                     </span>
                   </div>
                 )}

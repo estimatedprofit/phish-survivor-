@@ -11,9 +11,10 @@ import { SongSelector } from "@/components/song-selector"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Clock, Info, Loader2, Check, Ban, Lock } from "lucide-react" // Added Lock
+import { Clock, Info, Loader2, Check, Ban, Lock } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import Link from "next/link"
+import { toast } from "@/hooks/use-toast"
 
 const initialState: PickSongFormState = {
   message: "",
@@ -63,6 +64,11 @@ export function PickFormClient({
 
   useEffect(() => {
     if (formState.success && formState.pick) {
+      toast({
+        title: "Pick Saved!",
+        description: formState.message || "Your pick has been locked in.",
+      })
+
       const redirectPoolId = poolIdFromQuery || currentPool.id
       setTimeout(() => router.push(`/dashboard?poolId=${redirectPoolId}`), 1500)
     }
