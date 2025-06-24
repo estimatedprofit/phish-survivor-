@@ -473,6 +473,44 @@ export async function archivePoolAction(poolId: string): Promise<AdminActionStat
   return { message: `Pool "${updatedPool.name}" has been archived.`, success: true }
 }
 
+export async function unarchivePoolAction(poolId: string): Promise<AdminActionState> {
+  console.log("Admin: Attempting to unarchive pool", poolId)
+
+  const supabase = await createSupabaseServerClient(true)
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { message: "Unauthorized: User not found.", success: false }
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+
+  if (!profile || profile.role !== "admin") {
+    return { message: "Unauthorized: Only admins can unarchive pools.", success: false }
+  }
+
+  const { data: updatedPool, error } = await supabase
+    .from("pools")
+    .update({ visibility: "public" })
+    .eq("id", poolId)
+    .select("name")
+    .single()
+
+  if (error || !updatedPool) {
+    console.error(`Admin: Error unarchiving pool ${poolId}:`, error)
+    return { message: `Failed to unarchive pool: ${error?.message || "Pool not found or error occurred."}`, success: false }
+  }
+
+  console.log(`Admin: Pool ${poolId} visibility changed to public.`)
+
+  revalidatePath("/admin", "page")
+  revalidatePath("/admin?view=archived", "page")
+  revalidatePath("/", "layout")
+
+  return { message: `Pool "${updatedPool.name}" has been unarchived and is now public.`, success: true }
+}
+
 // -------------------------
 // Import shows for a pool
 // -------------------------

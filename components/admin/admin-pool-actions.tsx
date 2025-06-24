@@ -6,8 +6,8 @@ import Link from "next/link"
 import { useState } from "react"
 import { useFormStatus } from "react-dom"
 import { Button } from "@/components/ui/button"
-import { endPoolAction, archivePoolAction } from "@/lib/actions"
-import { Loader2, Users, Trash2, PowerOff, Settings } from "lucide-react"
+import { endPoolAction, archivePoolAction, unarchivePoolAction } from "@/lib/actions"
+import { Loader2, Users, Trash2, PowerOff, Settings, RotateCw } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,7 +89,7 @@ export function AdminPoolActions({ pool, onActionComplete }: AdminPoolActionsPro
           <Users className="mr-2 h-4 w-4" /> Players
         </Link>
       </Button>
-      {pool.visibility !== "archived" && (
+      {pool.visibility !== "archived" ? (
         <Button
           variant="outline"
           size="sm"
@@ -99,6 +99,17 @@ export function AdminPoolActions({ pool, onActionComplete }: AdminPoolActionsPro
           }}
         >
           <Trash2 className="mr-2 h-4 w-4" /> Archive
+        </Button>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={async () => {
+            const result = await unarchivePoolAction(pool.id)
+            onActionComplete(result.message, result.success)
+          }}
+        >
+          <RotateCw className="mr-2 h-4 w-4" /> Unarchive
         </Button>
       )}
     </form>
