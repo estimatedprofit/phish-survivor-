@@ -88,6 +88,21 @@ export async function signupUser(prevState: SignupFormState, formData: FormData)
       return { message: "Nickname already taken. Please choose another.", success: false }
     }
 
+    // Some deployments return a generic "Database error saving new user" instead of the raw PG error.
+    // When that happens, we perform a quick check to see if the nickname already exists and return
+    // a clearer message.
+    if (signUpError.message?.toLowerCase().includes("database error saving new user")) {
+      const { data: existingNick } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("nickname", nickname)
+        .maybeSingle()
+
+      if (existingNick) {
+        return { message: "Nickname already taken. Please choose another.", success: false }
+      }
+    }
+
     // Detect existing email error (Supabase returns 400 with this message)
     if (signUpError.message?.toLowerCase().includes("user already registered")) {
       return { message: "Email already registered. Try logging in instead.", success: false }
