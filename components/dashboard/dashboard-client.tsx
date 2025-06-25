@@ -66,8 +66,9 @@ export function DashboardClient({
     return allLeaderboardEntries
   }, [allLeaderboardEntries, leaderboardFilter])
 
-  // Determine next upcoming show (first UPCOMING or PICKS_LOCKED)
-  const nextShow = shows.find((s) => s.status === "UPCOMING" || s.status === "PICKS_LOCKED")
+  // Determine in-progress (PICKS_LOCKED) and next upcoming (UPCOMING)
+  const inProgressShow = shows.find((s) => s.status === "PICKS_LOCKED")
+  const nextShow = shows.find((s) => s.status === "UPCOMING" && s.id !== inProgressShow?.id)
 
   if (isLoading || !user || !pool) {
     return (
@@ -93,21 +94,28 @@ export function DashboardClient({
         currentFilter={leaderboardFilter}
       />
       <Separator />
+      {/* In-Progress Show Section */}
+      {inProgressShow && (
+        <section className="mb-8">
+          <h2 className="text-2xl font-semibold mb-4">In-Progress Show</h2>
+          <UpcomingShowsSection shows={[inProgressShow]} userStatus={user.status} pool={pool} />
+        </section>
+      )}
+
       {/* Next Show Section */}
-      {(() => {
-        if (nextShow) {
-          return (
-            <section className="mb-8">
-              <h2 className="text-2xl font-semibold mb-4">Next Show</h2>
-              {/* Re-use UpcomingShowsSection card layout for single show */}
-              <UpcomingShowsSection shows={[nextShow]} userStatus={user.status} pool={pool} />
-            </section>
-          )
-        }
-        return null
-      })()}
-      {/* Upcoming shows excluding the next one */}
-      <UpcomingShowsSection shows={shows.filter((s) => s.id !== nextShow?.id)} userStatus={user.status} pool={pool} />
+      {nextShow && (
+        <section className="mb-8">
+          <h2 className="text-2xl font-semibold mb-4">Next Show</h2>
+          <UpcomingShowsSection shows={[nextShow]} userStatus={user.status} pool={pool} />
+        </section>
+      )}
+
+      {/* Upcoming shows excluding the in-progress & next show */}
+      <UpcomingShowsSection
+        shows={shows.filter((s) => s.status === "UPCOMING" && s.id !== nextShow?.id)}
+        userStatus={user.status}
+        pool={pool}
+      />
       <Separator />
       <PastShowsSection shows={shows} />
       <Separator />

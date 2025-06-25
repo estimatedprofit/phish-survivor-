@@ -1,5 +1,5 @@
 // Mock data and functions to simulate API calls
-import type { User, Pool, PhishShow, Song, LeaderboardEntry, Pick } from "@/types"
+import type { User, Pool, PhishShow, Song, LeaderboardEntry, Pick, ShowResultsSummary } from "@/types"
 import type { PoolParticipantWithProfile } from "@/types"
 import { subHours, subMinutes, isPast, parseISO } from "date-fns"
 import { createSupabaseServerClient, createSupabaseAdminClient, type TypedSupabaseClient } from "@/lib/supabase/server"
@@ -345,6 +345,38 @@ const getShowDateTime = (showDateStr: string, setTimeStr?: string, cityState?: s
   }
 }
 
+// Helper to build a summarized view of results for a show – used by dashboard "Past Shows" section
+function buildShowResultsSummary(
+  picks: Array<{ song_id: string; result: string }>,
+  songsMap: Map<string, Song>,
+  setlistSongIds: Set<string>,
+): ShowResultsSummary {
+  const countMap = new Map<string, number>()
+  let eliminated = 0
+
+  for (const p of picks) {
+    countMap.set(p.song_id, (countMap.get(p.song_id) || 0) + 1)
+    if (p.result === "LOSE") eliminated++
+  }
+
+  const songPickCounts = Array.from(countMap.entries())
+    .map(([songId, cnt]) => {
+      const song = songsMap.get(songId)
+      if (!song) return null
+      return {
+        song,
+        count: cnt,
+        played: setlistSongIds.has(songId),
+      }
+    })
+    .filter(Boolean) as { song: Song; count: number; played?: boolean }[]
+
+  return {
+    eliminatedCount: eliminated,
+    songPickCounts,
+  }
+}
+
 export const getShows = async (
   pool: Pool,
   providedSupabase?: TypedSupabaseClient,
@@ -405,65 +437,85 @@ export const getShows = async (
   const allSongs = await getAllSongs(supabase)
   const songsMap = new Map(allSongs.map((song) => [song.id, song]))
 
-  return dbShows.map((dbShow) => {
-    let calculatedPickDeadline: Date | null = null
-    if (pool.pickLockTimeOfDay) {
-      // Fixed time of day lock
-      const tz = inferTimezone(dbShow.city_state || undefined)
-      const localStr = `${dbShow.show_date} ${pool.pickLockTimeOfDay}`
-      try {
-        calculatedPickDeadline = fromZonedTime(localStr, tz)
-      } catch {
-        calculatedPickDeadline = null
-      }
-    } else {
-      const showDateTime = getShowDateTime(
-        dbShow.show_date,
-        (dbShow as any).set_time as string | undefined,
-        (dbShow as any).city_state as string | undefined,
-      )
-
-      if (showDateTime) {
-        let tempDeadline = new Date(showDateTime.getTime())
-        if (pool.pickLockOffsetHours != null) tempDeadline = subHours(tempDeadline, pool.pickLockOffsetHours)
-        if (pool.pickLockOffsetMinutes != null) tempDeadline = subMinutes(tempDeadline, pool.pickLockOffsetMinutes)
-        calculatedPickDeadline = tempDeadline
-      }
-    }
-
-    let currentStatus = dbShow.status as PhishShow["status"]
-    if (!pool.isTestPool && currentStatus === "UPCOMING" && calculatedPickDeadline && isPast(calculatedPickDeadline)) {
-      currentStatus = "PICKS_LOCKED"
-    }
-
-    // Map setlist song IDs to Song objects
-    const setlistSongs: Song[] = []
-    if (dbShow.setlist && Array.isArray(dbShow.setlist)) {
-      dbShow.setlist.forEach((songId: string) => {
-        const song = songsMap.get(songId)
-        if (song) {
-          setlistSongs.push(song)
+  // Build detailed objects for each show (async to allow additional queries)
+  return await Promise.all(
+    dbShows.map(async (dbShow) => {
+      let calculatedPickDeadline: Date | null = null
+      if (pool.pickLockTimeOfDay) {
+        // Fixed time of day lock
+        const tz = inferTimezone(dbShow.city_state || undefined)
+        const localStr = `${dbShow.show_date} ${pool.pickLockTimeOfDay}`
+        try {
+          calculatedPickDeadline = fromZonedTime(localStr, tz)
+        } catch {
+          calculatedPickDeadline = null
         }
-      })
-    }
+      } else {
+        const showDateTime = getShowDateTime(
+          dbShow.show_date,
+          (dbShow as any).set_time as string | undefined,
+          (dbShow as any).city_state as string | undefined,
+        )
 
-    return {
-      id: dbShow.id,
-      phishNetShowId: dbShow.phish_net_show_id || "",
-      date: dbShow.show_date,
-      eventDate: dbShow.event_date || dbShow.show_date,
-      venue: dbShow.venue_name,
-      cityState: dbShow.city_state || "",
-      timeZone: inferTimezone(dbShow.city_state || undefined),
-      status: currentStatus,
-      setTime: dbShow.set_time || undefined,
-      pickDeadline: calculatedPickDeadline ? calculatedPickDeadline.toISOString() : undefined,
-      userPick: userPicksForPoolMap.get(dbShow.id),
-      setlist: setlistSongs, // Use the mapped Song objects
-      resultsSummary: undefined, // TODO: Implement results summary fetching
-      isActive: dbShow.is_active,
-    }
-  })
+        if (showDateTime) {
+          let tempDeadline = new Date(showDateTime.getTime())
+          if (pool.pickLockOffsetHours != null) tempDeadline = subHours(tempDeadline, pool.pickLockOffsetHours)
+          if (pool.pickLockOffsetMinutes != null) tempDeadline = subMinutes(tempDeadline, pool.pickLockOffsetMinutes)
+          calculatedPickDeadline = tempDeadline
+        }
+      }
+
+      let currentStatus = dbShow.status as PhishShow["status"]
+      if (!pool.isTestPool && currentStatus === "UPCOMING" && calculatedPickDeadline && isPast(calculatedPickDeadline)) {
+        currentStatus = "PICKS_LOCKED"
+      }
+
+      // Map setlist song IDs to Song objects
+      const setlistSongs: Song[] = []
+      if (dbShow.setlist && Array.isArray(dbShow.setlist)) {
+        dbShow.setlist.forEach((songId: string) => {
+          const song = songsMap.get(songId)
+          if (song) {
+            setlistSongs.push(song)
+          }
+        })
+      }
+
+      // Build results summary if at least picks are locked (status PICKS_LOCKED or PLAYED)
+      let resultsSummary: ShowResultsSummary | undefined = undefined
+      if (currentStatus === "PLAYED" || currentStatus === "PICKS_LOCKED") {
+        const { data: showPicks, error: picksError } = await supabase
+          .from("picks")
+          .select("song_id, result")
+          .eq("show_id", dbShow.id)
+
+        if (!picksError && showPicks) {
+          resultsSummary = buildShowResultsSummary(
+            showPicks as Array<{ song_id: string; result: string }>,
+            songsMap,
+            new Set(setlistSongs.map((s) => s.id)),
+          )
+        }
+      }
+
+      return {
+        id: dbShow.id,
+        phishNetShowId: dbShow.phish_net_show_id || "",
+        date: dbShow.show_date,
+        eventDate: dbShow.event_date || dbShow.show_date,
+        venue: dbShow.venue_name,
+        cityState: dbShow.city_state || "",
+        timeZone: inferTimezone(dbShow.city_state || undefined),
+        status: currentStatus,
+        setTime: dbShow.set_time || undefined,
+        pickDeadline: calculatedPickDeadline ? calculatedPickDeadline.toISOString() : undefined,
+        userPick: userPicksForPoolMap.get(dbShow.id),
+        setlist: setlistSongs, // Use the mapped Song objects
+        resultsSummary,
+        isActive: dbShow.is_active,
+      }
+    })
+  )
 }
 
 export const getShowDetails = async (
@@ -576,6 +628,23 @@ export const getShowDetails = async (
     })
   }
 
+  // Build results summary if at least picks are locked (status PICKS_LOCKED or PLAYED)
+  let resultsSummary: ShowResultsSummary | undefined = undefined
+  if (currentStatus === "PLAYED" || currentStatus === "PICKS_LOCKED") {
+    const { data: showPicks, error: picksErr } = await supabase
+      .from("picks")
+      .select("song_id, result")
+      .eq("show_id", dbShow.id)
+
+    if (!picksErr && showPicks) {
+      resultsSummary = buildShowResultsSummary(
+        showPicks as Array<{ song_id: string; result: string }>,
+        songsMap,
+        new Set(setlistSongs.map((s) => s.id)),
+      )
+    }
+  }
+
   console.log(`[getShowDetails] Successfully found and processed show: "${dbShow.venue_name}"`)
   return {
     id: dbShow.id,
@@ -590,7 +659,7 @@ export const getShowDetails = async (
     pickDeadline: calculatedPickDeadline ? calculatedPickDeadline.toISOString() : undefined,
     userPick: userPicksForPoolMap.get(dbShow.id),
     setlist: setlistSongs, // Use the mapped Song objects
-    resultsSummary: undefined,
+    resultsSummary,
     isActive: dbShow.is_active,
   }
 }
