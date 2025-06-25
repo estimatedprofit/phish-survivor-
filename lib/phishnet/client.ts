@@ -90,10 +90,16 @@ export async function scrapeSetlistHtml(showDate: string): Promise<string> {
     // Newer pages wrap them in <li class="setlist-song">.  Grab them all.
     const texts: string[] = []
     $(".setlist-body a, .setlist-body span, .setlist-body li.setlist-song").each((_: unknown, el: any) => {
-      const t = $(el).text().trim()
-      if (t && !/[>|,]/.test(t)) {
-        texts.push(t)
-      }
+      const raw = $(el).text().trim()
+      if (!raw) return
+
+      // Remove trailing characters like "," or ">" that appear in the markup
+      const cleaned = raw.replace(/[>|,]+$/g, "").trim()
+
+      // Skip section labels (e.g., "Set 1:", "Encore:") and empty strings
+      if (!cleaned || /^(set\s*\d+|encore)[:]?/i.test(cleaned)) return
+
+      texts.push(cleaned)
     })
 
     if (!texts.length) return ""

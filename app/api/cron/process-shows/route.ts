@@ -143,16 +143,35 @@ export async function GET(request: Request) {
         .split(/[>,]/)
         .map((t) => t.trim())
         .filter(Boolean)
-        .map((t) =>
-          t
-            .replace(/^(Set\s*\d+:?\s*)/i, "")
-            .replace(/^(Set\s*[I|II|III]+:?\s*)/i, "")
-            .replace(/^(Encore:?:?\s*)/i, "")
-            .trim(),
-        )
-      const songIds = titles.map((t) => titleToId.get(normalizeTitle(t))).filter(Boolean) as string[]
+
+      // NEW: Ensure every title has a matching song ID in the DB. If not, create it.
+      const missingTitles: string[] = []
+      for (const t of titles) {
+        if (!titleToId.has(normalizeTitle(t))) {
+          missingTitles.push(t)
+        }
+      }
+
+      if (missingTitles.length) {
+        // Insert any new songs and update the cache map
+        const { data: inserted, error: insertErr } = await supabase
+          .from("songs")
+          .insert(missingTitles.map((title) => ({ title })))
+          .select("id, title")
+
+        if (!insertErr && inserted) {
+          inserted.forEach((s: any) => {
+            titleToId.set(normalizeTitle(s.title), s.id)
+          })
+        }
+      }
+
+      const songIds = titles
+        .map((t) => titleToId.get(normalizeTitle(t)))
+        .filter(Boolean) as string[]
+
       if (songIds.length === 0) {
-        results.push({ showId: show.id, processed: false, reason: "No titles matched songs table" })
+        results.push({ showId: show.id, processed: false, reason: "No titles matched songs table (even after insert)" })
         continue
       }
       // Determine finalize based on venue local time (midnight next day, or 2am if NYE)
