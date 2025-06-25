@@ -7,6 +7,8 @@ import { getShow, getSetlistByDate } from "@/lib/phishnet/client"
 import { processShowResultsInternal } from "@/lib/results"
 import { getAllSongs } from "@/lib/data"
 import { normalizeTitle } from "@/lib/utils"
+import { fromZonedTime } from "date-fns-tz"
+import { inferTimezone } from "@/lib/data"
 
 export const dynamic = "force-dynamic"
 
@@ -47,7 +49,7 @@ export async function GET(request: Request) {
 
   let showQuery = supabase
     .from("shows")
-    .select("id, pool_id, phish_net_show_id, show_date, event_date, status, setlist, is_active, pools (is_test_pool)")
+    .select("id, pool_id, phish_net_show_id, show_date, event_date, city_state, status, setlist, is_active, pools (is_test_pool)")
     .eq("is_active", true)
 
   if (!manualPoolId) {
@@ -56,7 +58,7 @@ export async function GET(request: Request) {
     // Manual admin run: include shows regardless of activation flag/date.
     showQuery = supabase
       .from("shows")
-      .select("id, pool_id, phish_net_show_id, show_date, event_date, status, setlist, is_active, pools (is_test_pool)")
+      .select("id, pool_id, phish_net_show_id, show_date, event_date, city_state, status, setlist, is_active, pools (is_test_pool)")
       .eq("is_active", true)
       .eq("pool_id", manualPoolId)
       .order("show_date", { ascending: true })
@@ -82,8 +84,19 @@ export async function GET(request: Request) {
     // If the show already has a setlist saved in DB, use it directly (helpful for test pools)
     if (Array.isArray(show.setlist) && show.setlist.length > 0) {
       const songIds = show.setlist as string[]
-      const todayDate = new Date().toISOString().split("T")[0]
-      const finalize = todayDate > show.show_date // day has passed
+
+      // Determine if we should finalize based on venue local time (+1 day 00:00, or +2h for NYE)
+      const tz = inferTimezone(show.city_state || undefined)
+      const baseLocalStr = `${show.show_date} 00:00`
+      let startUtc: Date
+      try {
+        startUtc = fromZonedTime(baseLocalStr, tz)
+      } catch {
+        startUtc = new Date(`${show.show_date}T00:00:00Z`)
+      }
+      const isNye = show.show_date.endsWith("-12-31")
+      const finalizeUtc = new Date(startUtc.getTime() + (isNye ? 26 : 24) * 60 * 60 * 1000)
+      const finalize = Date.now() >= finalizeUtc.getTime()
       const r = await processShowResultsInternal({ showId: show.id, poolId: show.pool_id, setlistSongIds: songIds, finalize })
       results.push({ showId: show.id, processed: true, used: "existing-setlist", ...r })
       continue
@@ -142,9 +155,19 @@ export async function GET(request: Request) {
         results.push({ showId: show.id, processed: false, reason: "No titles matched songs table" })
         continue
       }
-      const todayDate2 = new Date().toISOString().split("T")[0]
-      const finalize2 = todayDate2 > show.show_date
-      const r = await processShowResultsInternal({ showId: show.id, poolId: show.pool_id, setlistSongIds: songIds, finalize: finalize2 })
+      // Determine finalize based on venue local time (midnight next day, or 2am if NYE)
+      const tz = inferTimezone(show.city_state || undefined)
+      const baseLocalStr = `${show.show_date} 00:00`
+      let startUtc: Date
+      try {
+        startUtc = fromZonedTime(baseLocalStr, tz)
+      } catch {
+        startUtc = new Date(`${show.show_date}T00:00:00Z`)
+      }
+      const isNye = show.show_date.endsWith("-12-31")
+      const finalizeUtc = new Date(startUtc.getTime() + (isNye ? 26 : 24) * 60 * 60 * 1000) // +24h or +26h
+      const finalize = Date.now() >= finalizeUtc.getTime()
+      const r = await processShowResultsInternal({ showId: show.id, poolId: show.pool_id, setlistSongIds: songIds, finalize })
       results.push({ showId: show.id, processed: true, ...r })
     } catch (e: any) {
       results.push({ showId: show.id, processed: false, reason: e.message })
