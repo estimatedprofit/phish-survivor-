@@ -74,8 +74,9 @@ export async function processShowResultsInternal({ showId, poolId, setlistSongId
   if (finalize) {
     await supabase.from("shows").update({ status: "PLAYED" }).eq("id", showId)
   } else {
-    // Ensure show is at least PICKS_LOCKED so countdown stops
-    await supabase.from("shows").update({ status: "PICKS_LOCKED" }).eq("id", showId)
+    // If we have at least one song, flag the show as IN_PROGRESS so the UI can show a live banner.
+    const newStatus = setlistSongIds.length ? "IN_PROGRESS" : "PICKS_LOCKED"
+    await supabase.from("shows").update({ status: newStatus }).eq("id", showId)
   }
 
   revalidatePath(`/admin/pool/${poolId}`)
