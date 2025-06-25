@@ -127,12 +127,16 @@ export async function GET(request: Request) {
         } catch {}
       }
 
-      // HTML scrape fallback when API hasn't populated yet
-      if (!raw || raw.trim() === "") {
-        try {
-          const { scrapeSetlistHtml } = await import("@/lib/phishnet/client")
-          raw = await scrapeSetlistHtml(show.event_date || show.show_date)
-        } catch {}
+      // HTML scrape fallback when API hasn't populated yet OR when it is incomplete
+      {
+        const { scrapeSetlistHtml } = await import("@/lib/phishnet/client")
+        const scraped = await scrapeSetlistHtml(show.event_date || show.show_date)
+        if (scraped && scraped.trim()) {
+          // Use scraped if API raw is empty OR scraped has more separators (songs) than API raw
+          if (!raw || raw.split(/[>,]/).length < scraped.split(/[>,]/).length) {
+            raw = scraped
+          }
+        }
       }
 
       if (!raw || raw.trim() === "") {
