@@ -57,7 +57,7 @@ export function UpcomingShowsSection({ shows, userStatus, pool }: UpcomingShowsS
                     </span>
                   </div>
                 )}
-                {show.status === "UPCOMING" && userStatus === "ALIVE" && show.userPick && (
+                {["UPCOMING", "PICKS_LOCKED"].includes(show.status) && userStatus === "ALIVE" && show.userPick && (
                   <div className="flex items-center text-sm text-blue-600 dark:text-blue-400 pt-2">
                     <CheckSquare className="mr-2 h-4 w-4" />
                     <span>

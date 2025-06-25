@@ -82,7 +82,9 @@ export async function GET(request: Request) {
     // If the show already has a setlist saved in DB, use it directly (helpful for test pools)
     if (Array.isArray(show.setlist) && show.setlist.length > 0) {
       const songIds = show.setlist as string[]
-      const r = await processShowResultsInternal({ showId: show.id, poolId: show.pool_id, setlistSongIds: songIds })
+      const todayDate = new Date().toISOString().split("T")[0]
+      const finalize = todayDate > show.show_date // day has passed
+      const r = await processShowResultsInternal({ showId: show.id, poolId: show.pool_id, setlistSongIds: songIds, finalize })
       results.push({ showId: show.id, processed: true, used: "existing-setlist", ...r })
       continue
     }
@@ -140,7 +142,9 @@ export async function GET(request: Request) {
         results.push({ showId: show.id, processed: false, reason: "No titles matched songs table" })
         continue
       }
-      const r = await processShowResultsInternal({ showId: show.id, poolId: show.pool_id, setlistSongIds: songIds })
+      const todayDate2 = new Date().toISOString().split("T")[0]
+      const finalize2 = todayDate2 > show.show_date
+      const r = await processShowResultsInternal({ showId: show.id, poolId: show.pool_id, setlistSongIds: songIds, finalize: finalize2 })
       results.push({ showId: show.id, processed: true, ...r })
     } catch (e: any) {
       results.push({ showId: show.id, processed: false, reason: e.message })

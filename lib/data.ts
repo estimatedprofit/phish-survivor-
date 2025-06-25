@@ -123,7 +123,7 @@ export const getPoolDetails = async (
     .from("pools")
     .select(
       `
-id, name, description, tour_name, signup_deadline, status, visibility, max_players, is_test_pool,
+id, name, description, tour_name, signup_deadline, status, visibility, max_players, is_test_pool, pick_lock_time,
 pick_lock_offset_hours, pick_lock_offset_minutes,
 pool_participants(status)
 `,
@@ -153,6 +153,7 @@ pool_participants(status)
     isTestPool: dbPool.is_test_pool,
     pickLockOffsetHours: dbPool.pick_lock_offset_hours === null ? undefined : dbPool.pick_lock_offset_hours,
     pickLockOffsetMinutes: dbPool.pick_lock_offset_minutes === null ? undefined : dbPool.pick_lock_offset_minutes,
+    pickLockTimeOfDay: dbPool.pick_lock_time || undefined,
     totalEntrants,
     activePlayers,
   }
@@ -164,7 +165,7 @@ export const getAvailablePools = async (providedSupabase?: TypedSupabaseClient):
     .from("pools")
     .select(
       `
-id, name, description, tour_name, signup_deadline, status, visibility, max_players, is_test_pool,
+id, name, description, tour_name, signup_deadline, status, visibility, max_players, is_test_pool, pick_lock_time,
 pool_participants(status)
 `,
     )
@@ -218,7 +219,7 @@ export const getArchivedPools = async (providedSupabase?: TypedSupabaseClient): 
     .from("pools")
     .select(
       `
-id, name, description, tour_name, signup_deadline, status, visibility, max_players, is_test_pool,
+id, name, description, tour_name, signup_deadline, status, visibility, max_players, is_test_pool, pick_lock_time,
 pool_participants(status)
 `,
     )
@@ -406,13 +407,28 @@ export const getShows = async (
 
   return dbShows.map((dbShow) => {
     let calculatedPickDeadline: Date | null = null
-    const showDateTime = getShowDateTime(dbShow.show_date, dbShow.set_time, dbShow.city_state)
+    if (pool.pickLockTimeOfDay) {
+      // Fixed time of day lock
+      const tz = inferTimezone(dbShow.city_state || undefined)
+      const localStr = `${dbShow.show_date} ${pool.pickLockTimeOfDay}`
+      try {
+        calculatedPickDeadline = fromZonedTime(localStr, tz)
+      } catch {
+        calculatedPickDeadline = null
+      }
+    } else {
+      const showDateTime = getShowDateTime(
+        dbShow.show_date,
+        (dbShow as any).set_time as string | undefined,
+        (dbShow as any).city_state as string | undefined,
+      )
 
-    if (showDateTime) {
-      let tempDeadline = new Date(showDateTime.getTime())
-      if (pool.pickLockOffsetHours != null) tempDeadline = subHours(tempDeadline, pool.pickLockOffsetHours)
-      if (pool.pickLockOffsetMinutes != null) tempDeadline = subMinutes(tempDeadline, pool.pickLockOffsetMinutes)
-      calculatedPickDeadline = tempDeadline
+      if (showDateTime) {
+        let tempDeadline = new Date(showDateTime.getTime())
+        if (pool.pickLockOffsetHours != null) tempDeadline = subHours(tempDeadline, pool.pickLockOffsetHours)
+        if (pool.pickLockOffsetMinutes != null) tempDeadline = subMinutes(tempDeadline, pool.pickLockOffsetMinutes)
+        calculatedPickDeadline = tempDeadline
+      }
     }
 
     let currentStatus = dbShow.status as PhishShow["status"]
@@ -520,13 +536,28 @@ export const getShowDetails = async (
   const songsMap = new Map(allSongs.map((song) => [song.id, song]))
 
   let calculatedPickDeadline: Date | null = null
-  const showDateTime = getShowDateTime(dbShow.show_date, dbShow.set_time, dbShow.city_state)
+  if (pool.pickLockTimeOfDay) {
+    // Fixed time of day lock
+    const tz = inferTimezone(dbShow.city_state || undefined)
+    const localStr = `${dbShow.show_date} ${pool.pickLockTimeOfDay}`
+    try {
+      calculatedPickDeadline = fromZonedTime(localStr, tz)
+    } catch {
+      calculatedPickDeadline = null
+    }
+  } else {
+    const showDateTime = getShowDateTime(
+      dbShow.show_date,
+      (dbShow as any).set_time as string | undefined,
+      (dbShow as any).city_state as string | undefined,
+    )
 
-  if (showDateTime) {
-    let tempDeadline = new Date(showDateTime.getTime())
-    if (pool.pickLockOffsetHours != null) tempDeadline = subHours(tempDeadline, pool.pickLockOffsetHours)
-    if (pool.pickLockOffsetMinutes != null) tempDeadline = subMinutes(tempDeadline, pool.pickLockOffsetMinutes)
-    calculatedPickDeadline = tempDeadline
+    if (showDateTime) {
+      let tempDeadline = new Date(showDateTime.getTime())
+      if (pool.pickLockOffsetHours != null) tempDeadline = subHours(tempDeadline, pool.pickLockOffsetHours)
+      if (pool.pickLockOffsetMinutes != null) tempDeadline = subMinutes(tempDeadline, pool.pickLockOffsetMinutes)
+      calculatedPickDeadline = tempDeadline
+    }
   }
 
   let currentStatus = dbShow.status as PhishShow["status"]
@@ -571,6 +602,13 @@ export const getLeaderboard = async (
   const supabase = createSupabaseAdminClient()
   if (!isUUID(poolId)) return []
 
+  // Fetch pool details to use pick lock offsets for visibility rules
+  const pool = await getPoolDetails(poolId, supabase)
+  if (!pool) {
+    console.error(`[getLeaderboard] Pool not found for id ${poolId}`)
+    return []
+  }
+
   const { data, error } = await supabase
     .from("pool_participants")
     .select(
@@ -585,7 +623,7 @@ picks (
   picked_at,
   result,
   songs (title),
-  shows (show_date, venue_name)
+  shows (show_date, venue_name, set_time, city_state, status)
 )
 `,
     )
@@ -599,8 +637,44 @@ picks (
   }
 
   const leaderboardEntries: LeaderboardEntry[] = data.map((participant: any, index) => {
+    // Compute which picks are visible based on pick-lock deadline
     const allPicks: Pick[] =
-      participant.picks?.map((p: any) => ({
+      (participant.picks || []).filter((p: any) => {
+        const show = p.shows
+        if (!show) return false // Shouldn't happen
+
+        // Always visible if show status already moved beyond UPCOMING (i.e., PICKS_LOCKED or PLAYED)
+        if (show.status && show.status !== "UPCOMING") return true
+
+        // Otherwise, compute if pick deadline has passed
+        const showDateStr = show.show_date as string | undefined
+        if (!showDateStr) return false
+
+        const showDateTime = getShowDateTime(
+          showDateStr,
+          (show as any).set_time as string | undefined,
+          (show as any).city_state as string | undefined,
+        )
+        if (!showDateTime) return false
+
+        let deadline: Date | null = null
+        if (pool.pickLockTimeOfDay) {
+          const tz = inferTimezone((show as any).city_state || undefined)
+          const localStr = `${showDateStr} ${pool.pickLockTimeOfDay}`
+          try {
+            deadline = fromZonedTime(localStr, tz)
+          } catch {
+            deadline = null
+          }
+        } else {
+          deadline = new Date(showDateTime.getTime())
+          if (pool.pickLockOffsetHours != null) deadline = subHours(deadline, pool.pickLockOffsetHours)
+          if (pool.pickLockOffsetMinutes != null) deadline = subMinutes(deadline, pool.pickLockOffsetMinutes)
+        }
+
+        return deadline ? isPast(deadline) : false
+      })
+      .map((p: any) => ({
         id: p.id,
         userId: participant.profiles.id,
         songId: p.song_id,
@@ -610,9 +684,7 @@ picks (
         lockedAt: p.picked_at,
         showDate: p.shows?.show_date,
         showVenue: p.shows?.venue_name,
-      })) || []
-
-    const lastPick = allPicks.sort((a, b) => new Date(b.showDate!).getTime() - new Date(a.showDate!).getTime())[0]
+      }))
 
     const correctPicks = allPicks.filter((p) => p.result === "WIN").length
     return {
@@ -620,7 +692,7 @@ picks (
       rank: index + 1,
       nickname: participant.profiles.nickname,
       status: participant.status,
-      lastPick: lastPick?.songTitle || "-",
+      lastPick: allPicks.sort((a, b) => new Date(b.showDate!).getTime() - new Date(a.showDate!).getTime())[0]?.songTitle || "-",
       allPicks,
       current_streak: participant.current_streak || 0,
       correct_picks: correctPicks,

@@ -24,6 +24,7 @@ export interface Pool {
   visibility: "public" | "private" | "archived"
   pickLockOffsetHours?: number
   pickLockOffsetMinutes?: number
+  pickLockTimeOfDay?: string // "HH:mm" 24-hour local venue time to lock picks
   isTestPool?: boolean
   nextShow?: {
     show_date: string

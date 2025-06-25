@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList } from "recharts"
 import type { PickStat } from "@/hooks/use-pick-stats"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 
@@ -37,7 +37,9 @@ export function PickStatsChart({ stats }: { stats: PickStat[] }) {
             <XAxis type="number" hide domain={[0, 'dataMax']} />
             <YAxis type="category" dataKey="songTitle" width={160} tick={{ fontSize: 12 }} />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="count" fill="#60a5fa" />
+            <Bar dataKey="count" fill="#60a5fa">
+              <LabelList dataKey="count" position="right" style={{ fontSize: 12, fill: "var(--foreground)" }} />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

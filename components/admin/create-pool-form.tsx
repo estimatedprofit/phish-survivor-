@@ -38,6 +38,7 @@ export function CreatePoolForm() {
   const formRef = useRef<HTMLFormElement>(null)
   const [shareableLink, setShareableLink] = useState<string | null>(null)
   const [hasCopied, setHasCopied] = useState(false)
+  const [pickLockStrategy, setPickLockStrategy] = useState<"offset" | "fixed">("offset")
 
   useEffect(() => {
     if (state.success) {
@@ -115,45 +116,80 @@ export function CreatePoolForm() {
               <p className="text-xs text-muted-foreground">Leave blank for unlimited.</p>
             </div>
           </div>
-          <div className="space-y-2 border-t pt-4 mt-4">
+          <div className="space-y-4 border-t pt-4 mt-4">
             <Label className="flex items-center gap-2">
-              <Clock className="h-4 w-4" /> Pick Lock Offset
+              <Clock className="h-4 w-4" /> Pick Lock Strategy
             </Label>
-            <p className="text-xs text-muted-foreground mb-2">
-              How long before each show's scheduled start time should picks lock? (Applies to all shows in this pool).
-            </p>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="pickLockOffsetHours" className="text-sm">
-                  Hours
+            <RadioGroup
+              name="pickLockStrategy"
+              value={pickLockStrategy}
+              onValueChange={(val) => setPickLockStrategy(val as any)}
+              className="flex gap-6"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="offset" id="offsetStrategy" />
+                <Label htmlFor="offsetStrategy" className="font-normal text-sm">
+                  Offset (hours/min before showtime)
                 </Label>
-                <Input
-                  id="pickLockOffsetHours"
-                  name="pickLockOffsetHours"
-                  type="number"
-                  placeholder="e.g., 1"
-                  min="0"
-                  defaultValue="1"
-                />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="pickLockOffsetMinutes" className="text-sm">
-                  Minutes
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="fixed" id="fixedStrategy" />
+                <Label htmlFor="fixedStrategy" className="font-normal text-sm">
+                  Fixed time-of-day (e.g., 12:00 PM)
                 </Label>
-                <Input
-                  id="pickLockOffsetMinutes"
-                  name="pickLockOffsetMinutes"
-                  type="number"
-                  placeholder="e.g., 30"
-                  min="0"
-                  max="59"
-                  defaultValue="0"
-                />
               </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Example: 1 hour 0 minutes means picks lock 1hr before showtime.
-            </p>
+            </RadioGroup>
+
+            {pickLockStrategy === "offset" ? (
+              <>
+                <p className="text-xs text-muted-foreground mb-2">
+                  How long before each show's scheduled start time should picks lock? (Applies to all shows in this
+                  pool).
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="pickLockOffsetHours" className="text-sm">
+                      Hours
+                    </Label>
+                    <Input
+                      id="pickLockOffsetHours"
+                      name="pickLockOffsetHours"
+                      type="number"
+                      placeholder="e.g., 1"
+                      min="0"
+                      defaultValue="1"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="pickLockOffsetMinutes" className="text-sm">
+                      Minutes
+                    </Label>
+                    <Input
+                      id="pickLockOffsetMinutes"
+                      name="pickLockOffsetMinutes"
+                      type="number"
+                      placeholder="e.g., 30"
+                      min="0"
+                      max="59"
+                      defaultValue="0"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Example: 1 hour means picks lock 1hr before showtime.</p>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Pick lock time is the same clock time on every show date (venue's local timezone).
+                </p>
+                <div className="space-y-1 max-w-xs">
+                  <Label htmlFor="pickLockTimeOfDay" className="text-sm">
+                    Time of Day
+                  </Label>
+                  <Input id="pickLockTimeOfDay" name="pickLockTimeOfDay" type="time" defaultValue="12:00" />
+                </div>
+              </>
+            )}
           </div>
           <div className="space-y-2 border-t pt-4 mt-4">
             <Label>Visibility</Label>

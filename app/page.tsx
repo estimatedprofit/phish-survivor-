@@ -95,7 +95,7 @@ export default async function HomePage() {
             <ChevronRight className="h-6 w-6 text-zinc-900/50 hidden sm:block" />
             <div className="flex items-center gap-2 rounded-full bg-zinc-900/80 px-4 py-2 text-white shadow-md">
               <Trophy className="h-4 w-4 text-cyan-300" />
-              <span className="font-medium text-xs sm:text-sm">�� Win It All</span>
+              <span className="font-medium text-xs sm:text-sm">4. Win It All</span>
             </div>
           </div>
         </div>

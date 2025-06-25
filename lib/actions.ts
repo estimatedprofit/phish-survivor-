@@ -294,8 +294,10 @@ export async function createPool(prevState: CreatePoolFormState, formData: FormD
   const signupDeadlineStr = formData.get("signupDeadline") as string
   const maxPlayersStr = formData.get("maxPlayers") as string | undefined
   const visibility = formData.get("visibility") as "public" | "private"
+  const pickLockStrategy = (formData.get("pickLockStrategy") as string) || "offset"
   const pickLockOffsetHoursStr = formData.get("pickLockOffsetHours") as string
   const pickLockOffsetMinutesStr = formData.get("pickLockOffsetMinutes") as string
+  const pickLockTimeOfDayStr = formData.get("pickLockTimeOfDay") as string | undefined
   const isTestPoolFlag = formData.get("isTestPool") === "on"
 
   if (!name || !tourName || !signupDeadlineStr || !visibility) {
@@ -318,19 +320,30 @@ export async function createPool(prevState: CreatePoolFormState, formData: FormD
     return { message: "Invalid Max Players value. Must be a positive number.", success: false }
   }
 
-  const pickLockOffsetHours = pickLockOffsetHoursStr ? Number.parseInt(pickLockOffsetHoursStr, 10) : 0
-  const pickLockOffsetMinutes = pickLockOffsetMinutesStr ? Number.parseInt(pickLockOffsetMinutesStr, 10) : 0
+  let pickLockOffsetHours: number | null = null
+  let pickLockOffsetMinutes: number | null = null
+  let pickLockTimeOfDay: string | null = null
 
-  if (
-    isNaN(pickLockOffsetHours) ||
-    pickLockOffsetHours < 0 ||
-    isNaN(pickLockOffsetMinutes) ||
-    pickLockOffsetMinutes < 0 ||
-    pickLockOffsetMinutes >= 60
-  ) {
-    return {
-      message: "Invalid Pick Lock Offset. Hours and Minutes must be non-negative, and minutes less than 60.",
-      success: false,
+  if (pickLockStrategy === "fixed") {
+    if (!pickLockTimeOfDayStr || !/^\d{2}:\d{2}$/.test(pickLockTimeOfDayStr)) {
+      return { message: "Invalid Pick Lock Time. Provide in HH:MM format.", success: false }
+    }
+    pickLockTimeOfDay = pickLockTimeOfDayStr
+  } else {
+    pickLockOffsetHours = pickLockOffsetHoursStr ? Number.parseInt(pickLockOffsetHoursStr, 10) : 0
+    pickLockOffsetMinutes = pickLockOffsetMinutesStr ? Number.parseInt(pickLockOffsetMinutesStr, 10) : 0
+
+    if (
+      isNaN(pickLockOffsetHours) ||
+      pickLockOffsetHours < 0 ||
+      isNaN(pickLockOffsetMinutes) ||
+      pickLockOffsetMinutes < 0 ||
+      pickLockOffsetMinutes >= 60
+    ) {
+      return {
+        message: "Invalid Pick Lock Offset. Hours and Minutes must be non-negative, and minutes less than 60.",
+        success: false,
+      }
     }
   }
 
@@ -342,8 +355,9 @@ export async function createPool(prevState: CreatePoolFormState, formData: FormD
     status: "SIGNUPS_OPEN",
     max_players: maxPlayers,
     visibility,
-    pick_lock_offset_hours: pickLockOffsetHours || null, // Use null for DB if 0 or undefined
-    pick_lock_offset_minutes: pickLockOffsetMinutes || null, // Use null for DB if 0 or undefined
+    pick_lock_offset_hours: pickLockOffsetHours,
+    pick_lock_offset_minutes: pickLockOffsetMinutes,
+    pick_lock_time: pickLockTimeOfDay,
     created_by: user.id,
     is_test_pool: isTestPoolFlag,
   }

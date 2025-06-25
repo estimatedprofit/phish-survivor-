@@ -4,15 +4,14 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
-export async function processShowResultsInternal({
-  showId,
-  poolId,
-  setlistSongIds,
-}: {
+interface ProcessOptions {
   showId: string
   poolId: string
   setlistSongIds: string[]
-}) {
+  finalize?: boolean // if true, mark remaining PENDING picks as LOSE and OUT participants
+}
+
+export async function processShowResultsInternal({ showId, poolId, setlistSongIds, finalize = false }: ProcessOptions) {
   const supabase = createSupabaseAdminClient()
   if (!showId || !poolId || setlistSongIds.length === 0) {
     return { success: false, message: "Missing required data" }
@@ -51,24 +50,36 @@ export async function processShowResultsInternal({
       continue
     }
     const correct = setlistSongIds.includes(pick.song_id)
-    await supabase.from("picks").update({ result: correct ? "WIN" : "LOSE" }).eq("id", pick.id)
 
     if (correct) {
+      // Mark WIN if not already
+      await supabase.from("picks").update({ result: "WIN" }).eq("id", pick.id)
       winners++
       await supabase
         .from("pool_participants")
         .update({ current_streak: (participant.current_streak || 0) + 1 })
         .eq("id", participant.id)
-    } else {
+    } else if (finalize) {
+      // Only mark losses at finalization
+      await supabase.from("picks").update({ result: "LOSE" }).eq("id", pick.id)
       losers++
       await supabase.from("pool_participants").update({ status: "OUT", current_streak: 0 }).eq("id", participant.id)
     }
   }
 
-  await supabase.from("shows").update({ status: "PLAYED", setlist: setlistSongIds }).eq("id", showId)
+  // Update show setlist always
+  await supabase.from("shows").update({ setlist: setlistSongIds }).eq("id", showId)
+
+  // If finalizing, mark show as PLAYED
+  if (finalize) {
+    await supabase.from("shows").update({ status: "PLAYED" }).eq("id", showId)
+  } else {
+    // Ensure show is at least PICKS_LOCKED so countdown stops
+    await supabase.from("shows").update({ status: "PICKS_LOCKED" }).eq("id", showId)
+  }
 
   revalidatePath(`/admin/pool/${poolId}`)
   revalidatePath(`/dashboard?poolId=${poolId}`, "layout")
 
-  return { success: true, message: "Processed", winners, losers }
+  return { success: true, message: finalize ? "Finalized" : "Updated", winners, losers }
 } 
