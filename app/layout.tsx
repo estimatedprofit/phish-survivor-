@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   title: "Phish Survivor Pool",
   description: "Last fan standing wins!",
   generator: "v0.dev",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
+  viewport: "width=device-width, initial-scale=1",
 }
 
 export default async function RootLayout({
